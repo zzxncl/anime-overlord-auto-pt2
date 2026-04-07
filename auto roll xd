@@ -1,0 +1,140 @@
+-- =============================================
+-- Rayfield GUI - Auto x10 Crimson Banner (14 times)
+-- Fixed Rayfield link + LoadingSubtitle = "xxx"
+-- =============================================
+
+local Rayfield = loadstring(game:HttpGet('https://raw.githubusercontent.com/SiriusSoftwareLtd/Rayfield/main/source.lua'))()
+
+local Window = Rayfield:CreateWindow({
+    Name = "Crimson Auto Summon",
+    LoadingTitle = "Crimson Banner Farm",
+    LoadingSubtitle = "xxx",          -- your change
+    ConfigurationSaving = {
+        Enabled = false,
+    },
+})
+
+local Tab = Window:CreateTab("Summon", 4483362458)
+
+-- Variables
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Players = game:GetService("Players")
+
+local summonEvent = ReplicatedStorage:WaitForChild("summon"):WaitForChild("summon_RELIABLE")
+local bannerState = require(ReplicatedStorage.lobbyClient.ui.summon.bannerState)
+
+local player = Players.LocalPlayer
+local isRunning = false
+local summonCount = 0
+local maxSummons = 14
+
+-- ================== CRIMSON QUEEN HOOK ==================
+summonEvent.OnClientEvent:Connect(function(bufferData, extras)
+    if not bufferData then return end
+
+    pcall(function()
+        local offset = 0
+        local bufLen = buffer.len(bufferData)
+
+        while offset < bufLen do
+            local eventType = buffer.readu8(bufferData, offset)
+            offset += 1
+
+            if eventType == 0 then
+                local count = buffer.readu16(bufferData, offset)
+                offset += 2
+
+                for i = 1, count do
+                    local hasExtras = buffer.readu8(bufferData, offset) == 1
+                    offset += 1
+
+                    if hasExtras and extras and type(extras) == "table" then
+                        for _, heroData in ipairs(extras) do
+                            if type(heroData) == "table" then
+                                local id = tostring(heroData.id or heroData.Id or "")
+                                if id == "crimsonqueen" or string.lower(id) == "crimsonqueen" then
+                                    print("🎉 CRIMSON QUEEN FOUND!")
+                                    task.wait(1.5)
+                                    player:Kick("crimsonqueen found")
+                                    return
+                                end
+                            end
+                        end
+                    end
+                end
+            else
+                break
+            end
+        end
+    end)
+
+    -- Fallback
+    if extras and type(extras) == "table" then
+        for _, v in ipairs(extras) do
+            if type(v) == "table" then
+                local id = tostring(v.id or v.Id or "")
+                if id == "crimsonqueen" or string.lower(id) == "crimsonqueen" then
+                    print("🎉 CRIMSON QUEEN FOUND in extras!")
+                    task.wait(1.5)
+                    player:Kick("crimsonqueen found")
+                    return
+                end
+            end
+        end
+    end
+end)
+
+-- ================== TOGGLE ==================
+local AutoSummonToggle = Tab:CreateToggle({
+    Name = "Auto Summon x10 Crimson (14 times)",
+    CurrentValue = false,
+    Flag = "CrimsonAutoSummon",
+    Callback = function(Value)
+        isRunning = Value
+        
+        if Value then
+            summonCount = 0
+            print("Auto Crimson Summon started - Will do 14 x10 summons")
+
+            task.spawn(function()
+                while isRunning and summonCount < maxSummons do
+                    bannerState.set("CRIMSON")
+
+                    local banner = "CRIMSON"
+                    local bannerLen = #banner
+
+                    local buf = buffer.create(1 + 1 + 1 + 1 + 2 + bannerLen)
+
+                    buffer.writeu8(buf, 0, 0)
+                    buffer.writeu8(buf, 1, 1)
+                    buffer.writeu8(buf, 2, 10)
+                    buffer.writeu8(buf, 3, 1)
+                    buffer.writeu16(buf, 4, bannerLen)
+                    buffer.writestring(buf, 6, banner, bannerLen)
+
+                    summonEvent:FireServer(buf, {})
+                    
+                    summonCount += 1
+                    print("Summoned x10 on CRIMSON - Count: " .. summonCount .. "/" .. maxSummons)
+
+                    task.wait(1.6)
+                end
+
+                if summonCount >= maxSummons then
+                    isRunning = false
+                    AutoSummonToggle:Set(false)
+                    print("✅ Finished 14 summons. Toggle turned OFF.")
+                    Rayfield:Notify({
+                        Title = "Auto Summon Finished",
+                        Content = "Completed 14 x10 summons on Crimson.",
+                        Duration = 5,
+                    })
+                end
+            end)
+        else
+            print("Auto Crimson Summon stopped manually.")
+        end
+    end,
+})
+
+print("Crimson Auto Summon GUI loaded. Toggle to start (max 14 times).")
