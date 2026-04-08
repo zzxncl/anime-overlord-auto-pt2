@@ -1,6 +1,5 @@
 -- =============================================
--- Rayfield GUI - Auto x10 Crimson Banner (14 times)
--- Fixed Rayfield link + LoadingSubtitle = "xxx"
+-- Rayfield GUI - Auto x10 Crimson + Auto Hero Summon (Fixed Dropdown Final)
 -- =============================================
 
 local Rayfield = loadstring(game:HttpGet('https://raw.githubusercontent.com/SiriusSoftwareLtd/Rayfield/main/source.lua'))()
@@ -8,7 +7,7 @@ local Rayfield = loadstring(game:HttpGet('https://raw.githubusercontent.com/Siri
 local Window = Rayfield:CreateWindow({
     Name = "Crimson Auto Summon",
     LoadingTitle = "Crimson Banner Farm",
-    LoadingSubtitle = "xxx",          -- your change
+    LoadingSubtitle = "xxx",
     ConfigurationSaving = {
         Enabled = false,
     },
@@ -16,49 +15,103 @@ local Window = Rayfield:CreateWindow({
 
 local Tab = Window:CreateTab("Summon", 4483362458)
 
--- Variables
+-- Services
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Players = game:GetService("Players")
 
-local summonEvent = ReplicatedStorage:WaitForChild("summon"):WaitForChild("summon_RELIABLE")
-local bannerState = require(ReplicatedStorage.lobbyClient.ui.summon.bannerState)
-
 local player = Players.LocalPlayer
-local isRunning = false
-local summonCount = 0
-local maxSummons = 14
 
--- ================== CRIMSON QUEEN HOOK ==================
+local summonEvent = ReplicatedStorage:WaitForChild("summon"):WaitForChild("summon_RELIABLE")
+
+-- Variables
+local isCrimsonRunning = false
+local crimsonSummonCount = 0
+
+local isHeroRunning = false
+local selectedHeroes = {}
+local heroSummonCount = 0
+local maxHeroSummons = 14
+
+-- ================== HERO DATA ==================
+local mythicalHeroes = {
+    {display = "Bald Hero",          id = "baldHero",          shiny = "baldHeroShiny1"},
+    {display = "Goju",               id = "goju",              shiny = "gojuShiny1"},
+    {display = "Devil Knight",       id = "devilKnight",       shiny = "devilKnightShiny1"},
+    {display = "Ener (Lightning)",   id = "enerLightning",     shiny = nil},
+    {display = "Maine",              id = "maine",             shiny = "maineShiny1"},
+    {display = "Yono",               id = "yono",              shiny = nil},
+    {display = "Kaitou (Trinity)",   id = "kaitouTrinity",     shiny = nil},
+    {display = "Choy",               id = "choy",              shiny = "choyShiny1"},
+    {display = "Chain Man",          id = "chainMan",          shiny = "chainManShiny1"},
+    {display = "Cha-Hain",           id = "chaHain",           shiny = "chaHainShiny1"},
+    {display = "Greye",              id = "greye",             shiny = nil},
+    {display = "Death Surgeon",      id = "deathSurgeon",      shiny = "deathSurgeonShiny1"},
+    {display = "Imperial Silver",    id = "imperialSilver",    shiny = nil},
+    {display = "Kid Psychic",        id = "kidPsychic",        shiny = "kidPsychicShiny1"},
+}
+
+local secretHeroes = {
+    {display = "Streliana",          id = "strelianaStampede", shiny = "strelianaStampedeShiny1"},
+    {display = "Seref",              id = "seref",             shiny = "serefShiny1"},
+    {display = "Madoro",             id = "madoro",            shiny = "madoroShiny1"},
+    {display = "Song Jinuu",         id = "songJinuu",         shiny = "songJinuuShiny1"},
+    {display = "Susono",             id = "susono",            shiny = nil},
+    {display = "Igrus",              id = "igrus",             shiny = nil},
+    {display = "Strongest Alien",    id = "strongestAlien",    shiny = nil},
+    {display = "Red Hair",           id = "redHair",           shiny = "redHairShiny1"},
+}
+
+local function contains(tbl, value)
+    for _, v in ipairs(tbl) do if v == value then return true end end
+    return false
+end
+
+-- ================== DETECTION (Crimson Queen Normal + Shiny) ==================
+local crimsonTargets = {"crimsonqueen", "crimsonqueenshiny1"}
+
+local function checkForHero(results, targets)
+    if not results then return false end
+    for _, hero in ipairs(results) do
+        if type(hero) == "table" then
+            local id = tostring(hero.id or hero.Id or ""):lower()
+            for _, target in ipairs(targets) do
+                if id == target:lower() then
+                    print("🎉 " .. string.upper(target) .. " FOUND!")
+                    task.wait(1.5)
+                    if isHeroRunning then
+                        isHeroRunning = false
+                        print("Auto Hero stopped - Target hero found!")
+                    end
+                    return true
+                end
+            end
+        end
+    end
+    return false
+end
+
 summonEvent.OnClientEvent:Connect(function(bufferData, extras)
     if not bufferData then return end
 
     pcall(function()
         local offset = 0
         local bufLen = buffer.len(bufferData)
-
         while offset < bufLen do
             local eventType = buffer.readu8(bufferData, offset)
             offset += 1
-
             if eventType == 0 then
                 local count = buffer.readu16(bufferData, offset)
                 offset += 2
-
                 for i = 1, count do
                     local hasExtras = buffer.readu8(bufferData, offset) == 1
                     offset += 1
-
                     if hasExtras and extras and type(extras) == "table" then
-                        for _, heroData in ipairs(extras) do
-                            if type(heroData) == "table" then
-                                local id = tostring(heroData.id or heroData.Id or "")
-                                if id == "crimsonqueen" or string.lower(id) == "crimsonqueen" then
-                                    print("🎉 CRIMSON QUEEN FOUND!")
-                                    task.wait(1.5)
-                                    player:Kick("crimsonqueen found")
-                                    return
-                                end
-                            end
+                        if checkForHero(extras, crimsonTargets) then 
+                            player:Kick("crimsonqueen found")
+                            return 
+                        end
+                        if isHeroRunning and checkForHero(extras, selectedHeroes) then 
+                            return 
                         end
                     end
                 end
@@ -68,67 +121,156 @@ summonEvent.OnClientEvent:Connect(function(bufferData, extras)
         end
     end)
 
-    -- Fallback
     if extras and type(extras) == "table" then
-        for _, v in ipairs(extras) do
-            if type(v) == "table" then
-                local id = tostring(v.id or v.Id or "")
-                if id == "crimsonqueen" or string.lower(id) == "crimsonqueen" then
-                    print("🎉 CRIMSON QUEEN FOUND in extras!")
-                    task.wait(1.5)
-                    player:Kick("crimsonqueen found")
-                    return
-                end
-            end
+        if checkForHero(extras, crimsonTargets) then 
+            player:Kick("crimsonqueen found")
+            return 
+        end
+        if isHeroRunning and checkForHero(extras, selectedHeroes) then 
+            return 
         end
     end
 end)
 
--- ================== TOGGLE ==================
+-- Helper buffer
+local function createSummonBuffer(bannerName)
+    local bannerLen = #bannerName
+    local buf = buffer.create(1 + 1 + 1 + 1 + 2 + bannerLen)
+    buffer.writeu8(buf, 0, 0)
+    buffer.writeu8(buf, 1, 1)
+    buffer.writeu8(buf, 2, 10)
+    buffer.writeu8(buf, 3, 1)
+    buffer.writeu16(buf, 4, bannerLen)
+    buffer.writestring(buf, 6, bannerName, bannerLen)
+    return buf
+end
+
+-- ================== RARITY & HERO DROPDOWNS ==================
+local HeroDropdown
+
+local RarityDropdown = Tab:CreateDropdown({
+    Name = "Select Rarity",
+    Options = {"Mythical", "Secret", "Shiny"},
+    CurrentOption = {"Mythical"},
+    MultipleOptions = true,
+    Flag = "RaritySelect",
+    Callback = function(CurrentOption)
+        local newOptions = {}
+
+        if contains(CurrentOption, "Mythical") then
+            for _, h in ipairs(mythicalHeroes) do table.insert(newOptions, h.display) end
+        end
+        if contains(CurrentOption, "Secret") then
+            for _, h in ipairs(secretHeroes) do table.insert(newOptions, h.display) end
+        end
+        if contains(CurrentOption, "Shiny") then
+            for _, h in ipairs(mythicalHeroes) do
+                if h.shiny then table.insert(newOptions, h.display .. " (Shiny)") end
+            end
+            for _, h in ipairs(secretHeroes) do
+                if h.shiny then table.insert(newOptions, h.display .. " (Shiny)") end
+            end
+        end
+
+        table.sort(newOptions)
+
+        if #newOptions > 0 and HeroDropdown then
+            HeroDropdown:Refresh(newOptions)
+            task.wait(0.1)                    -- Small delay helps Rayfield
+            HeroDropdown:Set({newOptions[1]})
+        end
+
+        print("Rarity changed → " .. table.concat(CurrentOption, " + "))
+    end,
+})
+
+HeroDropdown = Tab:CreateDropdown({
+    Name = "Select Hero to Summon Until",
+    Options = {"Bald Hero"},
+    CurrentOption = {"Bald Hero"},
+    MultipleOptions = false,
+    Flag = "HeroSelect",
+    Callback = function(CurrentOption)
+        if #CurrentOption == 0 then return end
+
+        local displayName = CurrentOption[1]
+        selectedHeroes = {}
+
+        -- Normal
+        for _, h in ipairs(mythicalHeroes) do
+            if h.display == displayName then
+                table.insert(selectedHeroes, h.id)
+                if h.shiny then table.insert(selectedHeroes, h.shiny) end
+                break
+            end
+        end
+        for _, h in ipairs(secretHeroes) do
+            if h.display == displayName then
+                table.insert(selectedHeroes, h.id)
+                if h.shiny then table.insert(selectedHeroes, h.shiny) end
+                break
+            end
+        end
+
+        -- Shiny
+        if string.find(displayName, "%(Shiny%)$") then
+            local baseName = string.gsub(displayName, " %([^)]+%)", "")
+            selectedHeroes = {}
+            for _, h in ipairs(mythicalHeroes) do
+                if h.display == baseName and h.shiny then
+                    table.insert(selectedHeroes, h.shiny)
+                    break
+                end
+            end
+            for _, h in ipairs(secretHeroes) do
+                if h.display == baseName and h.shiny then
+                    table.insert(selectedHeroes, h.shiny)
+                    break
+                end
+            end
+        end
+
+        print("Now targeting: " .. displayName)
+    end,
+})
+
+-- ================== MAX SUMMONS ==================
+local MaxSummonsTextbox = Tab:CreateInput({
+    Name = "Max Summons (x10 each)",
+    PlaceholderText = "14",
+    RemoveTextAfterFocusLost = false,
+    Callback = function(Text)
+        local num = tonumber(Text)
+        if num and num > 0 then
+            maxHeroSummons = num
+        else
+            Rayfield:Notify({Title = "Invalid Input", Content = "Please enter a valid number", Duration = 3})
+        end
+    end,
+})
+
+-- ================== TOGGLES ==================
 local AutoSummonToggle = Tab:CreateToggle({
     Name = "Auto Summon x10 Crimson (14 times)",
     CurrentValue = false,
     Flag = "CrimsonAutoSummon",
     Callback = function(Value)
-        isRunning = Value
-        
+        isCrimsonRunning = Value
+        crimsonSummonCount = 0
         if Value then
-            summonCount = 0
-            print("Auto Crimson Summon started - Will do 14 x10 summons")
-
+            print("Auto Crimson Summon started")
             task.spawn(function()
-                while isRunning and summonCount < maxSummons do
-                    bannerState.set("CRIMSON")
-
-                    local banner = "CRIMSON"
-                    local bannerLen = #banner
-
-                    local buf = buffer.create(1 + 1 + 1 + 1 + 2 + bannerLen)
-
-                    buffer.writeu8(buf, 0, 0)
-                    buffer.writeu8(buf, 1, 1)
-                    buffer.writeu8(buf, 2, 10)
-                    buffer.writeu8(buf, 3, 1)
-                    buffer.writeu16(buf, 4, bannerLen)
-                    buffer.writestring(buf, 6, banner, bannerLen)
-
-                    summonEvent:FireServer(buf, {})
-                    
-                    summonCount += 1
-                    print("Summoned x10 on CRIMSON - Count: " .. summonCount .. "/" .. maxSummons)
-
-                    task.wait(1.6)
+                while isCrimsonRunning and crimsonSummonCount < 14 do
+                    local buf = createSummonBuffer("CRIMSON")
+                    pcall(function() summonEvent:FireServer(buf, {}) end)
+                    crimsonSummonCount += 1
+                    print("Crimson x10 - Count: " .. crimsonSummonCount .. "/14")
+                    task.wait(2.2 + math.random(0,8)/10)
                 end
-
-                if summonCount >= maxSummons then
-                    isRunning = false
+                if crimsonSummonCount >= 14 then
+                    isCrimsonRunning = false
                     AutoSummonToggle:Set(false)
-                    print("✅ Finished 14 summons. Toggle turned OFF.")
-                    Rayfield:Notify({
-                        Title = "Auto Summon Finished",
-                        Content = "Completed 14 x10 summons on Crimson.",
-                        Duration = 5,
-                    })
+                    Rayfield:Notify({Title = "Auto Summon Finished", Content = "Completed 14 x10 summons on Crimson.", Duration = 5})
                 end
             end)
         else
@@ -137,4 +279,39 @@ local AutoSummonToggle = Tab:CreateToggle({
     end,
 })
 
-print("Crimson Auto Summon GUI loaded. Toggle to start (max 14 times).")
+local AutoHeroToggle = Tab:CreateToggle({
+    Name = "Auto Hero Summon (x10 on Normal)",
+    CurrentValue = false,
+    Flag = "AutoHeroSummon",
+    Callback = function(Value)
+        isHeroRunning = Value
+        heroSummonCount = 0
+        if Value then
+            print("Auto Hero Summon started")
+            Rayfield:Notify({Title = "Auto Hero Active", Content = "Running up to " .. maxHeroSummons .. " summons", Duration = 5})
+
+            task.spawn(function()
+                while isHeroRunning and heroSummonCount < maxHeroSummons do
+                    local buf = createSummonBuffer("NORMAL")
+                    pcall(function() summonEvent:FireServer(buf, {}) end)
+                    heroSummonCount += 1
+                    print("Hero x10 - Count: " .. heroSummonCount .. "/" .. maxHeroSummons)
+                    task.wait(2.2 + math.random(0,8)/10)
+                end
+
+                isHeroRunning = false
+                AutoHeroToggle:Set(false)
+
+                Rayfield:Notify({Title = "Auto Hero Stopped", Content = "Stopped after " .. heroSummonCount .. " summons.", Duration = 5})
+            end)
+        else
+            print("Auto Hero Summon stopped manually.")
+        end
+    end,
+})
+
+-- Initial Setup
+task.wait(1.2)
+RarityDropdown.Callback({"Mythical"})
+
+print("✅ GUI Loaded - Dropdown fix applied")
