@@ -1,5 +1,5 @@
 -- =============================================
--- Rayfield GUI - Auto x10 Crimson + Auto Hero Summon (Crimson Queen Selector)
+-- Rayfield GUI - Auto x10 Crimson + Auto Hero Summon (Faster Version)
 -- =============================================
 
 local Rayfield = loadstring(game:HttpGet('https://raw.githubusercontent.com/SiriusSoftwareLtd/Rayfield/main/source.lua'))()
@@ -32,36 +32,36 @@ local selectedHeroes = {}
 local heroSummonCount = 0
 local maxHeroSummons = 14
 
--- Crimson Queen Targets (New)
-local selectedCrimsonTargets = {"crimsonqueen"}  -- default: regular only
+-- Crimson Queen Targets
+local crimsonTargets = {"crimsonqueen", "crimsonqueenshiny1"}
 
 -- ================== HERO DATA ==================
 local mythicalHeroes = {
-    {display = "Bald Hero",          id = "baldHero",          shiny = "baldHeroShiny1"},
-    {display = "Goju",               id = "goju",              shiny = "gojuShiny1"},
-    {display = "Devil Knight",       id = "devilKnight",       shiny = "devilKnightShiny1"},
-    {display = "Ener (Lightning)",   id = "enerLightning",     shiny = nil},
-    {display = "Maine",              id = "maine",             shiny = "maineShiny1"},
-    {display = "Yono",               id = "yono",              shiny = nil},
-    {display = "Kaitou (Trinity)",   id = "kaitouTrinity",     shiny = nil},
-    {display = "Choy",               id = "choy",              shiny = "choyShiny1"},
-    {display = "Chain Man",          id = "chainMan",          shiny = "chainManShiny1"},
-    {display = "Cha-Hain",           id = "chaHain",           shiny = "chaHainShiny1"},
-    {display = "Greye",              id = "greye",             shiny = nil},
-    {display = "Death Surgeon",      id = "deathSurgeon",      shiny = "deathSurgeonShiny1"},
-    {display = "Imperial Silver",    id = "imperialSilver",    shiny = nil},
-    {display = "Kid Psychic",        id = "kidPsychic",        shiny = "kidPsychicShiny1"},
+    {display = "Bald Hero", id = "baldHero", shiny = "baldHeroShiny1"},
+    {display = "Goju", id = "goju", shiny = "gojuShiny1"},
+    {display = "Devil Knight", id = "devilKnight", shiny = "devilKnightShiny1"},
+    {display = "Ener (Lightning)", id = "enerLightning", shiny = nil},
+    {display = "Maine", id = "maine", shiny = "maineShiny1"},
+    {display = "Yono", id = "yono", shiny = nil},
+    {display = "Kaitou (Trinity)", id = "kaitouTrinity", shiny = nil},
+    {display = "Choy", id = "choy", shiny = "choyShiny1"},
+    {display = "Chain Man", id = "chainMan", shiny = "chainManShiny1"},
+    {display = "Cha-Hain", id = "chaHain", shiny = "chaHainShiny1"},
+    {display = "Greye", id = "greye", shiny = nil},
+    {display = "Death Surgeon", id = "deathSurgeon", shiny = "deathSurgeonShiny1"},
+    {display = "Imperial Silver", id = "imperialSilver", shiny = nil},
+    {display = "Kid Psychic", id = "kidPsychic", shiny = "kidPsychicShiny1"},
 }
 
 local secretHeroes = {
-    {display = "Streliana",          id = "strelianaStampede", shiny = "strelianaStampedeShiny1"},
-    {display = "Seref",              id = "seref",             shiny = "serefShiny1"},
-    {display = "Madoro",             id = "madoro",            shiny = "madoroShiny1"},
-    {display = "Song Jinuu",         id = "songJinuu",         shiny = "songJinuuShiny1"},
-    {display = "Susono",             id = "susono",            shiny = nil},
-    {display = "Igrus",              id = "igrus",             shiny = nil},
-    {display = "Strongest Alien",    id = "strongestAlien",    shiny = nil},
-    {display = "Red Hair",           id = "redHair",           shiny = "redHairShiny1"},
+    {display = "Streliana", id = "strelianaStampede", shiny = "strelianaStampedeShiny1"},
+    {display = "Seref", id = "seref", shiny = "serefShiny1"},
+    {display = "Madoro", id = "madoro", shiny = "madoroShiny1"},
+    {display = "Song Jinuu", id = "songJinuu", shiny = "songJinuuShiny1"},
+    {display = "Susono", id = "susono", shiny = nil},
+    {display = "Igrus", id = "igrus", shiny = nil},
+    {display = "Strongest Alien", id = "strongestAlien", shiny = nil},
+    {display = "Red Hair", id = "redHair", shiny = "redHairShiny1"},
 }
 
 local function contains(tbl, value)
@@ -107,12 +107,10 @@ summonEvent.OnClientEvent:Connect(function(bufferData, extras)
                     local hasExtras = buffer.readu8(bufferData, offset) == 1
                     offset += 1
                     if hasExtras and extras and type(extras) == "table" then
-                        -- Crimson Queen Check (based on user selection)
-                        if checkForHero(extras, selectedCrimsonTargets) then 
+                        if checkForHero(extras, crimsonTargets) then 
                             player:Kick("crimsonqueen found")
                             return 
                         end
-                        -- Hero Check
                         if isHeroRunning and checkForHero(extras, selectedHeroes) then 
                             return 
                         end
@@ -125,7 +123,7 @@ summonEvent.OnClientEvent:Connect(function(bufferData, extras)
     end)
 
     if extras and type(extras) == "table" then
-        if checkForHero(extras, selectedCrimsonTargets) then 
+        if checkForHero(extras, crimsonTargets) then 
             player:Kick("crimsonqueen found")
             return 
         end
@@ -148,27 +146,27 @@ local function createSummonBuffer(bannerName)
     return buf
 end
 
--- ================== CRIMSON QUEEN TARGET DROPDOWN (New) ==================
+-- ================== CRIMSON QUEEN TARGET ==================
 local CrimsonTargetDropdown = Tab:CreateDropdown({
     Name = "Crimson Queen Target",
-    Options = {"Regular", "Shiny", "Both"},
-    CurrentOption = {"Regular"},
+    Options = {"Regular Only", "Shiny Only", "Both"},
+    CurrentOption = {"Both"},
     MultipleOptions = false,
     Flag = "CrimsonTarget",
     Callback = function(CurrentOption)
         local choice = CurrentOption[1]
-        if choice == "Regular" then
-            selectedCrimsonTargets = {"crimsonqueen"}
-        elseif choice == "Shiny" then
-            selectedCrimsonTargets = {"crimsonqueenshiny1"}
-        elseif choice == "Both" then
-            selectedCrimsonTargets = {"crimsonqueen", "crimsonqueenshiny1"}
+        if choice == "Regular Only" then
+            crimsonTargets = {"crimsonqueen"}
+        elseif choice == "Shiny Only" then
+            crimsonTargets = {"crimsonqueenshiny1"}
+        else
+            crimsonTargets = {"crimsonqueen", "crimsonqueenshiny1"}
         end
-        print("Crimson Queen target set to: " .. choice)
+        print("Crimson Target: " .. choice)
     end,
 })
 
--- ================== RARITY DROPDOWN ==================
+-- ================== RARITY & HERO DROPDOWNS ==================
 local HeroDropdown
 
 local RarityDropdown = Tab:CreateDropdown({
@@ -179,7 +177,6 @@ local RarityDropdown = Tab:CreateDropdown({
     Flag = "RaritySelect",
     Callback = function(CurrentOption)
         local newOptions = {}
-
         if contains(CurrentOption, "Mythical") then
             for _, h in ipairs(mythicalHeroes) do table.insert(newOptions, h.display) end
         end
@@ -196,18 +193,14 @@ local RarityDropdown = Tab:CreateDropdown({
         end
 
         table.sort(newOptions)
-
         if #newOptions > 0 and HeroDropdown then
             HeroDropdown:Refresh(newOptions)
             task.wait(0.1)
             HeroDropdown:Set({newOptions[1]})
         end
-
-        print("Rarity changed → " .. table.concat(CurrentOption, " + "))
     end,
 })
 
--- ================== HERO DROPDOWN ==================
 HeroDropdown = Tab:CreateDropdown({
     Name = "Select Hero to Summon Until",
     Options = {"Bald Hero"},
@@ -216,7 +209,6 @@ HeroDropdown = Tab:CreateDropdown({
     Flag = "HeroSelect",
     Callback = function(CurrentOption)
         if #CurrentOption == 0 then return end
-
         local displayName = CurrentOption[1]
         selectedHeroes = {}
 
@@ -236,22 +228,15 @@ HeroDropdown = Tab:CreateDropdown({
         end
 
         if string.find(displayName, "%(Shiny%)$") then
-            local baseName = string.gsub(displayName, " %([^)]+%)", "")
+            local base = string.gsub(displayName, " %([^)]+%)", "")
             selectedHeroes = {}
             for _, h in ipairs(mythicalHeroes) do
-                if h.display == baseName and h.shiny then
-                    table.insert(selectedHeroes, h.shiny)
-                    break
-                end
+                if h.display == base and h.shiny then table.insert(selectedHeroes, h.shiny) break end
             end
             for _, h in ipairs(secretHeroes) do
-                if h.display == baseName and h.shiny then
-                    table.insert(selectedHeroes, h.shiny)
-                    break
-                end
+                if h.display == base and h.shiny then table.insert(selectedHeroes, h.shiny) break end
             end
         end
-
         print("Now targeting: " .. displayName)
     end,
 })
@@ -263,55 +248,51 @@ local MaxSummonsTextbox = Tab:CreateInput({
     RemoveTextAfterFocusLost = false,
     Callback = function(Text)
         local num = tonumber(Text)
-        if num and num > 0 then
-            maxHeroSummons = num
-        else
-            Rayfield:Notify({Title = "Invalid Input", Content = "Please enter a valid number", Duration = 3})
-        end
+        if num and num > 0 then maxHeroSummons = num end
     end,
 })
 
--- ================== CRIMSON AUTO SUMMON ==================
+-- ================== FASTER CRIMSON AUTO SUMMON ==================
 local AutoSummonToggle = Tab:CreateToggle({
-    Name = "Auto Summon x10 Crimson (14 times)",
+    Name = "Auto Summon x10 Crimson (14 times) - FAST",
     CurrentValue = false,
     Flag = "CrimsonAutoSummon",
     Callback = function(Value)
         isCrimsonRunning = Value
         crimsonSummonCount = 0
         if Value then
-            print("Auto Crimson Summon started - Targeting: " .. table.concat(selectedCrimsonTargets, " + "))
+            print("⚡ Fast Auto Crimson started")
             task.spawn(function()
                 while isCrimsonRunning and crimsonSummonCount < 14 do
                     local buf = createSummonBuffer("CRIMSON")
                     pcall(function() summonEvent:FireServer(buf, {}) end)
                     crimsonSummonCount += 1
                     print("Crimson x10 - Count: " .. crimsonSummonCount .. "/14")
-                    task.wait(2.2 + math.random(0,8)/10)
+                    task.wait(0.85 + math.random(0, 20)/100)  -- 0.85s to 1.05s
                 end
                 if crimsonSummonCount >= 14 then
                     isCrimsonRunning = false
                     AutoSummonToggle:Set(false)
-                    Rayfield:Notify({Title = "Auto Summon Finished", Content = "Completed 14 x10 summons on Crimson.", Duration = 5})
+                    Rayfield:Notify({Title = "Finished", Content = "14 x10 Crimson summons completed", Duration = 5})
                 end
             end)
         else
-            print("Auto Crimson Summon stopped manually.")
+            print("Auto Crimson stopped manually.")
         end
     end,
 })
 
--- ================== AUTO HERO SUMMON ==================
+-- ================== FASTER AUTO HERO SUMMON ==================
 local AutoHeroToggle = Tab:CreateToggle({
-    Name = "Auto Hero Summon (x10 on Normal)",
+    Name = "Auto Hero Summon (x10 on Normal) - FAST",
     CurrentValue = false,
     Flag = "AutoHeroSummon",
     Callback = function(Value)
         isHeroRunning = Value
         heroSummonCount = 0
         if Value then
-            print("Auto Hero Summon started")
-            Rayfield:Notify({Title = "Auto Hero Active", Content = "Running up to " .. maxHeroSummons .. " summons", Duration = 5})
+            print("⚡ Fast Auto Hero started")
+            Rayfield:Notify({Title = "Auto Hero Active", Content = "Fast mode enabled", Duration = 5})
 
             task.spawn(function()
                 while isHeroRunning and heroSummonCount < maxHeroSummons do
@@ -319,16 +300,15 @@ local AutoHeroToggle = Tab:CreateToggle({
                     pcall(function() summonEvent:FireServer(buf, {}) end)
                     heroSummonCount += 1
                     print("Hero x10 - Count: " .. heroSummonCount .. "/" .. maxHeroSummons)
-                    task.wait(2.2 + math.random(0,8)/10)
+                    task.wait(0.85 + math.random(0, 20)/100)  -- 0.85s to 1.05s
                 end
 
                 isHeroRunning = false
                 AutoHeroToggle:Set(false)
-
                 Rayfield:Notify({Title = "Auto Hero Stopped", Content = "Stopped after " .. heroSummonCount .. " summons.", Duration = 5})
             end)
         else
-            print("Auto Hero Summon stopped manually.")
+            print("Auto Hero stopped manually.")
         end
     end,
 })
@@ -336,6 +316,6 @@ local AutoHeroToggle = Tab:CreateToggle({
 -- Initial Setup
 task.wait(1.2)
 RarityDropdown.Callback({"Mythical"})
-CrimsonTargetDropdown.Callback({"Regular"})   -- Set default
+CrimsonTargetDropdown.Callback({"Both"})
 
-print("✅ GUI Loaded - Crimson Queen target selector added")
+print("✅ GUI Loaded - FAST summoning enabled (0.85s ~ 1.05s delay)")
