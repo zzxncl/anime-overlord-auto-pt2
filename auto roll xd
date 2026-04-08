@@ -1,5 +1,5 @@
 -- =============================================
--- Rayfield GUI - Auto x10 Crimson + Auto Hero Summon (Fixed Dropdown Final)
+-- Rayfield GUI - Auto x10 Crimson + Auto Hero Summon (Crimson Queen Selector)
 -- =============================================
 
 local Rayfield = loadstring(game:HttpGet('https://raw.githubusercontent.com/SiriusSoftwareLtd/Rayfield/main/source.lua'))()
@@ -31,6 +31,9 @@ local isHeroRunning = false
 local selectedHeroes = {}
 local heroSummonCount = 0
 local maxHeroSummons = 14
+
+-- Crimson Queen Targets (New)
+local selectedCrimsonTargets = {"crimsonqueen"}  -- default: regular only
 
 -- ================== HERO DATA ==================
 local mythicalHeroes = {
@@ -66,9 +69,7 @@ local function contains(tbl, value)
     return false
 end
 
--- ================== DETECTION (Crimson Queen Normal + Shiny) ==================
-local crimsonTargets = {"crimsonqueen", "crimsonqueenshiny1"}
-
+-- ================== DETECTION ==================
 local function checkForHero(results, targets)
     if not results then return false end
     for _, hero in ipairs(results) do
@@ -106,10 +107,12 @@ summonEvent.OnClientEvent:Connect(function(bufferData, extras)
                     local hasExtras = buffer.readu8(bufferData, offset) == 1
                     offset += 1
                     if hasExtras and extras and type(extras) == "table" then
-                        if checkForHero(extras, crimsonTargets) then 
+                        -- Crimson Queen Check (based on user selection)
+                        if checkForHero(extras, selectedCrimsonTargets) then 
                             player:Kick("crimsonqueen found")
                             return 
                         end
+                        -- Hero Check
                         if isHeroRunning and checkForHero(extras, selectedHeroes) then 
                             return 
                         end
@@ -122,7 +125,7 @@ summonEvent.OnClientEvent:Connect(function(bufferData, extras)
     end)
 
     if extras and type(extras) == "table" then
-        if checkForHero(extras, crimsonTargets) then 
+        if checkForHero(extras, selectedCrimsonTargets) then 
             player:Kick("crimsonqueen found")
             return 
         end
@@ -145,7 +148,27 @@ local function createSummonBuffer(bannerName)
     return buf
 end
 
--- ================== RARITY & HERO DROPDOWNS ==================
+-- ================== CRIMSON QUEEN TARGET DROPDOWN (New) ==================
+local CrimsonTargetDropdown = Tab:CreateDropdown({
+    Name = "Crimson Queen Target",
+    Options = {"Regular", "Shiny", "Both"},
+    CurrentOption = {"Regular"},
+    MultipleOptions = false,
+    Flag = "CrimsonTarget",
+    Callback = function(CurrentOption)
+        local choice = CurrentOption[1]
+        if choice == "Regular" then
+            selectedCrimsonTargets = {"crimsonqueen"}
+        elseif choice == "Shiny" then
+            selectedCrimsonTargets = {"crimsonqueenshiny1"}
+        elseif choice == "Both" then
+            selectedCrimsonTargets = {"crimsonqueen", "crimsonqueenshiny1"}
+        end
+        print("Crimson Queen target set to: " .. choice)
+    end,
+})
+
+-- ================== RARITY DROPDOWN ==================
 local HeroDropdown
 
 local RarityDropdown = Tab:CreateDropdown({
@@ -176,7 +199,7 @@ local RarityDropdown = Tab:CreateDropdown({
 
         if #newOptions > 0 and HeroDropdown then
             HeroDropdown:Refresh(newOptions)
-            task.wait(0.1)                    -- Small delay helps Rayfield
+            task.wait(0.1)
             HeroDropdown:Set({newOptions[1]})
         end
 
@@ -184,6 +207,7 @@ local RarityDropdown = Tab:CreateDropdown({
     end,
 })
 
+-- ================== HERO DROPDOWN ==================
 HeroDropdown = Tab:CreateDropdown({
     Name = "Select Hero to Summon Until",
     Options = {"Bald Hero"},
@@ -196,7 +220,6 @@ HeroDropdown = Tab:CreateDropdown({
         local displayName = CurrentOption[1]
         selectedHeroes = {}
 
-        -- Normal
         for _, h in ipairs(mythicalHeroes) do
             if h.display == displayName then
                 table.insert(selectedHeroes, h.id)
@@ -212,7 +235,6 @@ HeroDropdown = Tab:CreateDropdown({
             end
         end
 
-        -- Shiny
         if string.find(displayName, "%(Shiny%)$") then
             local baseName = string.gsub(displayName, " %([^)]+%)", "")
             selectedHeroes = {}
@@ -249,7 +271,7 @@ local MaxSummonsTextbox = Tab:CreateInput({
     end,
 })
 
--- ================== TOGGLES ==================
+-- ================== CRIMSON AUTO SUMMON ==================
 local AutoSummonToggle = Tab:CreateToggle({
     Name = "Auto Summon x10 Crimson (14 times)",
     CurrentValue = false,
@@ -258,7 +280,7 @@ local AutoSummonToggle = Tab:CreateToggle({
         isCrimsonRunning = Value
         crimsonSummonCount = 0
         if Value then
-            print("Auto Crimson Summon started")
+            print("Auto Crimson Summon started - Targeting: " .. table.concat(selectedCrimsonTargets, " + "))
             task.spawn(function()
                 while isCrimsonRunning and crimsonSummonCount < 14 do
                     local buf = createSummonBuffer("CRIMSON")
@@ -279,6 +301,7 @@ local AutoSummonToggle = Tab:CreateToggle({
     end,
 })
 
+-- ================== AUTO HERO SUMMON ==================
 local AutoHeroToggle = Tab:CreateToggle({
     Name = "Auto Hero Summon (x10 on Normal)",
     CurrentValue = false,
@@ -313,5 +336,6 @@ local AutoHeroToggle = Tab:CreateToggle({
 -- Initial Setup
 task.wait(1.2)
 RarityDropdown.Callback({"Mythical"})
+CrimsonTargetDropdown.Callback({"Regular"})   -- Set default
 
-print("✅ GUI Loaded - Dropdown fix applied")
+print("✅ GUI Loaded - Crimson Queen target selector added")
